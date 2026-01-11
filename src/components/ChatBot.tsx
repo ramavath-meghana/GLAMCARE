@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -12,20 +13,31 @@ interface Message {
   timestamp: Date;
 }
 
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/skincare-chat`;
+
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Hello! I'm your GlamCare AI assistant. How can I help you with your skincare today?",
+      text: "Hello! I'm your GlamCare wellness assistant. I'm here to help you understand your skin health from a holistic perspective. Remember: healthy inside, radiant outside! How can I help you today?",
       sender: "bot",
       timestamp: new Date(),
     },
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -36,47 +48,129 @@ const ChatBot = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
+    setIsLoading(true);
 
-    // Simulate bot response
-    setTimeout(() => {
-      const botResponse = generateResponse(inputValue);
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: botResponse,
+    // Prepare messages for API
+    const chatMessages = messages
+      .filter(m => m.id !== "1") // Skip initial greeting
+      .map(m => ({
+        role: m.sender === "user" ? "user" : "assistant",
+        content: m.text,
+      }));
+    chatMessages.push({ role: "user", content: inputValue });
+
+    let assistantText = "";
+    
+    try {
+      const response = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: chatMessages }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to get response");
+      }
+
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let streamDone = false;
+      
+      // Add initial bot message placeholder
+      const botMessageId = (Date.now() + 1).toString();
+      setMessages(prev => [...prev, {
+        id: botMessageId,
+        text: "",
         sender: "bot",
         timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, botMessage]);
-    }, 1000);
-  };
+      }]);
 
-  const generateResponse = (input: string): string => {
-    const lowerInput = input.toLowerCase();
-    
-    if (lowerInput.includes("oily") || lowerInput.includes("acne")) {
-      return "For oily skin and acne, I recommend using a gentle foaming cleanser twice daily, clay masks 2-3 times per week, and oil-free moisturizers. Natural remedies include tea tree oil and aloe vera gel. Would you like specific product recommendations?";
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantText += content;
+              setMessages(prev => prev.map(m => 
+                m.id === botMessageId ? { ...m, text: assistantText } : m
+              ));
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (raw.startsWith(":") || raw.trim() === "") continue;
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantText += content;
+              setMessages(prev => prev.map(m => 
+                m.id === botMessageId ? { ...m, text: assistantText } : m
+              ));
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast({
+        title: "Couldn't get response",
+        description: error instanceof Error ? error.message : "Please try again later",
+        variant: "destructive",
+      });
+      // Remove empty bot message on error
+      setMessages(prev => prev.filter(m => m.text !== ""));
+    } finally {
+      setIsLoading(false);
     }
-    
-    if (lowerInput.includes("dry") || lowerInput.includes("flaky")) {
-      return "Dry skin needs extra hydration! Use a creamy cleanser, apply honey or almond oil masks, and use rich moisturizers with hyaluronic acid. Drink plenty of water and consider using a humidifier. Would you like more detailed tips?";
-    }
-    
-    if (lowerInput.includes("dark circles") || lowerInput.includes("eye")) {
-      return "For dark circles, try cold cucumber slices, apply almond oil before bed, ensure adequate sleep (7-8 hours), and use a good under-eye cream. Vitamin K and caffeine-based eye creams can help. Would you like to book a consultation?";
-    }
-    
-    if (lowerInput.includes("sunscreen") || lowerInput.includes("sun protection")) {
-      return "Sunscreen is crucial! Use SPF 30+ daily, even indoors. Apply 15 minutes before sun exposure and reapply every 2-3 hours. Look for broad-spectrum protection. Would you like product suggestions?";
-    }
-    
-    return "That's a great question! For personalized advice, I recommend our AI skin analysis tool or booking a consultation with one of our expert dermatologists. Would you like me to help you with either option?";
   };
 
   if (!isOpen) {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-primary hover:shadow-glow transition-smooth shadow-soft"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-primary hover:shadow-glow transition-smooth shadow-soft z-50"
         size="icon"
       >
         <MessageCircle className="w-6 h-6" />
@@ -85,11 +179,11 @@ const ChatBot = () => {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 w-96 h-[500px] shadow-glow flex flex-col">
+    <Card className="fixed bottom-6 right-6 w-96 h-[500px] shadow-glow flex flex-col z-50">
       <div className="flex items-center justify-between p-4 border-b bg-gradient-primary rounded-t-lg">
         <div className="flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-primary-foreground" />
-          <h3 className="font-semibold text-primary-foreground">GlamCare Assistant</h3>
+          <h3 className="font-semibold text-primary-foreground">GlamCare Wellness Assistant</h3>
         </div>
         <Button
           variant="ghost"
@@ -101,7 +195,7 @@ const ChatBot = () => {
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -115,10 +209,17 @@ const ChatBot = () => {
                     : "bg-muted"
                 }`}
               >
-                <p className="text-sm">{message.text}</p>
+                <p className="text-sm whitespace-pre-wrap">{message.text || (isLoading ? "..." : "")}</p>
               </div>
             </div>
           ))}
+          {isLoading && messages[messages.length - 1]?.sender === "user" && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-lg p-3">
+                <Loader2 className="w-4 h-4 animate-spin" />
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
 
@@ -128,15 +229,17 @@ const ChatBot = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Ask about skincare..."
+            placeholder="Ask about skincare wellness..."
             className="flex-1"
+            disabled={isLoading}
           />
           <Button
             onClick={handleSend}
             size="icon"
             className="bg-gradient-primary hover:shadow-glow transition-smooth"
+            disabled={isLoading}
           >
-            <Send className="w-4 h-4" />
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
       </div>

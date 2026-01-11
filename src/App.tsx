@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import SkinAnalysis from "./pages/SkinAnalysis";
 import Doctors from "./pages/Doctors";
 import BookAppointment from "./pages/BookAppointment";
+import HomeRemedies from "./pages/HomeRemedies";
+import RecommendedProducts from "./pages/RecommendedProducts";
 import NotFound from "./pages/NotFound";
 import Navigation from "./components/Navigation";
 import ChatBot from "./components/ChatBot";
@@ -25,6 +27,8 @@ const App = () => (
           <Route path="/analyze" element={<SkinAnalysis />} />
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/book/:doctorId" element={<BookAppointment />} />
+          <Route path="/remedies" element={<HomeRemedies />} />
+          <Route path="/products" element={<RecommendedProducts />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
