@@ -1,16 +1,21 @@
 import { useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, Upload, Sparkles } from "lucide-react";
+import { Camera, Upload, Sparkles, Leaf, ShoppingBag, Apple, Stethoscope } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import AnalysisDropdown from "@/components/AnalysisDropdown";
 
 type SkinType = "oily" | "dry" | "normal" | "combination";
 
 interface AnalysisResult {
   skinType: SkinType;
   issues: string[];
+  possibleCauses: string[];
   remedies: string[];
   products: string[];
+  dietTips: string[];
+  lifestyleAdvice: string[];
 }
 
 const SkinAnalysis = () => {
@@ -24,39 +29,19 @@ const SkinAnalysis = () => {
 
   const startCamera = async () => {
     try {
-      console.log("Requesting camera access...");
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } 
       });
-      console.log("Camera access granted, stream:", mediaStream);
       setStream(mediaStream);
-      
-      // Wait for video element to be ready
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          videoRef.current.play().catch(err => {
-            console.error("Error playing video:", err);
-          });
-          console.log("Video element connected to stream");
+          videoRef.current.play().catch(console.error);
         }
       }, 100);
-      
-      toast({
-        title: "Camera Ready",
-        description: "Position your face in the frame",
-      });
+      toast({ title: "Camera Ready", description: "Position your face in the frame" });
     } catch (error) {
-      console.error("Camera error:", error);
-      toast({
-        title: "Camera Access Denied",
-        description: "Please allow camera access in your browser settings",
-        variant: "destructive",
-      });
+      toast({ title: "Camera Access Denied", description: "Please allow camera access", variant: "destructive" });
     }
   };
 
@@ -65,137 +50,164 @@ const SkinAnalysis = () => {
       const canvas = document.createElement("canvas");
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(videoRef.current, 0, 0);
-      const imageData = canvas.toDataURL("image/jpeg");
-      setImage(imageData);
+      canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
+      setImage(canvas.toDataURL("image/jpeg"));
       stopCamera();
     }
   };
 
   const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
+    stream?.getTracks().forEach(track => track.stop());
+    setStream(null);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setImage(e.target?.result as string);
-      };
+      reader.onload = (e) => setImage(e.target?.result as string);
       reader.readAsDataURL(file);
     }
   };
 
   const analyzeSkin = async () => {
     setAnalyzing(true);
-    console.log("Starting skin analysis...");
-    
-    // Simulate AI analysis
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Generate truly random skin type using timestamp for better randomization
     const skinTypes: SkinType[] = ["oily", "dry", "normal", "combination"];
-    const randomIndex = Math.floor((Math.random() * Date.now()) % skinTypes.length);
-    const randomSkinType = skinTypes[randomIndex];
-    
-    console.log("Analysis complete. Detected skin type:", randomSkinType);
+    const randomSkinType = skinTypes[Math.floor(Math.random() * skinTypes.length)];
+
+    const issuesMap: Record<SkinType, string[]> = {
+      oily: ["Excess sebum production", "Enlarged pores", "Prone to breakouts"],
+      dry: ["Reduced moisture retention", "Skin barrier concerns", "Visible fine lines"],
+      normal: ["Well-balanced sebum", "Good moisture levels", "Even texture"],
+      combination: ["Mixed sebum production", "T-zone congestion", "Cheek dryness"]
+    };
+
+    const causesMap: Record<SkinType, string[]> = {
+      oily: ["Hormonal fluctuations", "High glycemic diet", "Stress-related cortisol", "Humid climate adaptation"],
+      dry: ["Insufficient water intake", "Harsh cleansers stripping natural oils", "Low humidity environment", "Nutritional deficiencies"],
+      normal: ["Balanced diet", "Good hydration habits", "Consistent sleep schedule", "Effective stress management"],
+      combination: ["Hormonal variations", "Seasonal changes", "Mixed product usage", "Inconsistent skincare routine"]
+    };
 
     const remediesMap: Record<SkinType, string[]> = {
       oily: [
-        "Use a gentle, foaming cleanser twice daily",
-        "Apply clay masks 2-3 times per week to control oil",
-        "Use oil-free, non-comedogenic moisturizers",
-        "Try tea tree oil as a natural astringent",
-        "Use aloe vera gel to soothe and control shine"
+        "Apply multani mitti (fuller's earth) mask once a week",
+        "Use diluted tea tree oil on problem areas",
+        "Apply fresh aloe vera gel as a soothing treatment",
+        "Steam face with neem leaves for pore cleansing",
+        "Use rose water as a natural toner"
       ],
       dry: [
-        "Use a creamy, hydrating cleanser",
-        "Apply honey masks for deep hydration",
-        "Use rich moisturizers with hyaluronic acid",
-        "Try coconut oil or almond oil before bed",
-        "Drink plenty of water and use a humidifier"
+        "Apply honey and milk mask for deep hydration",
+        "Use coconut or almond oil before bedtime",
+        "Apply mashed avocado pack for nourishment",
+        "Use oatmeal and yogurt mask for gentle exfoliation",
+        "Apply cucumber slices for cooling hydration"
       ],
       normal: [
-        "Maintain routine with gentle cleansing",
-        "Use vitamin C serums for brightness",
-        "Apply rosewater toner for balance",
-        "Weekly exfoliation with mild scrubs",
-        "Use cucumber face packs for freshness"
+        "Maintain routine with turmeric and honey packs",
+        "Use papaya pulp for natural enzyme exfoliation",
+        "Apply tomato juice for antioxidant benefits",
+        "Use gram flour and turmeric for cleansing",
+        "Apply rose water and glycerin mix for glow"
       ],
       combination: [
-        "Use different products for different zones",
-        "Apply clay masks only on oily areas",
-        "Use lightweight, balanced moisturizers",
-        "Try multani mitti (fuller's earth) masks",
-        "Use neem-based products for balance"
+        "Apply clay mask only on oily T-zone areas",
+        "Use honey on dry cheek areas",
+        "Apply neem paste on congested zones",
+        "Use cucumber on dry areas for hydration",
+        "Zone-specific treatment approach"
       ]
     };
 
     const productsMap: Record<SkinType, string[]> = {
       oily: [
-        "Salicylic Acid 2% cleanser (BHA for deep pore cleansing)",
-        "Niacinamide 10% + Zinc 1% serum (oil control & pore minimizing)",
-        "Benzoyl Peroxide 2.5% spot treatment (for acne)",
-        "Oil-free gel moisturizer with hyaluronic acid",
-        "Mattifying sunscreen SPF 50+ (non-comedogenic)"
+        "GlamCare Oil Control Cleanser with Niacinamide",
+        "GlamCare Light Gel Moisturizer (oil-free)",
+        "GlamCare Matte Sunscreen SPF 50",
+        "GlamCare Salicylic Acid Spot Treatment"
       ],
       dry: [
-        "Gentle cream cleanser with ceramides",
-        "Hyaluronic Acid + Vitamin B5 serum (intense hydration)",
-        "Retinol 0.5% night cream (anti-aging & cell renewal)",
-        "Rich moisturizer with peptides and squalane",
-        "Hydrating sunscreen SPF 50+ with antioxidants"
+        "GlamCare Gentle Cream Cleanser with Ceramides",
+        "GlamCare Hydrating Serum with Hyaluronic Acid",
+        "GlamCare Rich Moisturizer with Squalane",
+        "GlamCare Hydrating Sunscreen SPF 50"
       ],
       normal: [
-        "Balanced pH cleanser with glycolic acid",
-        "Vitamin C 15% serum (brightening & antioxidant)",
-        "Lightweight moisturizer with SPF for day use",
-        "Gentle AHA/BHA toner for weekly exfoliation",
-        "Mineral sunscreen SPF 40+"
+        "GlamCare Balanced Gel Cleanser",
+        "GlamCare Vitamin C Brightening Serum",
+        "GlamCare Daily Moisturizer SPF 30",
+        "GlamCare Weekly Enzyme Mask"
       ],
       combination: [
-        "Gel-cream cleanser suitable for mixed skin",
-        "Niacinamide serum for balance (use all over)",
-        "Lightweight moisturizer + richer cream for dry areas",
-        "Clay mask for T-zone, hydrating mask for cheeks",
-        "Broad-spectrum sunscreen SPF 50+ (gel formula)"
+        "GlamCare Balancing Cleanser",
+        "GlamCare Zone-Control Serum",
+        "GlamCare Adaptive Moisturizer",
+        "GlamCare Multi-Zone Sunscreen"
       ]
     };
 
-    const issuesMap: Record<SkinType, string[]> = {
-      oily: ["Excess sebum production", "Enlarged pores", "Prone to acne"],
-      dry: ["Flaky skin", "Tight feeling", "Fine lines"],
-      normal: ["Well-balanced", "Minimal concerns"],
-      combination: ["Oily T-zone", "Dry cheeks", "Mixed texture"]
+    const dietMap: Record<SkinType, string[]> = {
+      oily: [
+        "Reduce dairy and high-glycemic foods",
+        "Increase zinc-rich foods (pumpkin seeds, chickpeas)",
+        "Add omega-3 fatty acids (walnuts, flaxseeds)",
+        "Drink green tea for antioxidants",
+        "Include bitter gourd and leafy greens"
+      ],
+      dry: [
+        "Increase healthy fats (avocado, olive oil, nuts)",
+        "Eat vitamin E rich foods (almonds, sunflower seeds)",
+        "Include omega-3 sources (fatty fish, chia seeds)",
+        "Drink at least 8 glasses of water daily",
+        "Consume fruits rich in water content"
+      ],
+      normal: [
+        "Maintain balanced diet with variety",
+        "Include antioxidant-rich berries",
+        "Eat colorful vegetables daily",
+        "Stay consistently hydrated",
+        "Include probiotics for gut health"
+      ],
+      combination: [
+        "Focus on anti-inflammatory foods",
+        "Balance omega-3 and omega-6 intake",
+        "Include vitamin A foods (carrots, sweet potato)",
+        "Moderate dairy consumption",
+        "Stay well hydrated throughout day"
+      ]
+    };
+
+    const lifestyleMap: Record<SkinType, string[]> = {
+      oily: ["Manage stress through yoga or meditation", "Get 7-8 hours of sleep", "Wash pillowcases weekly", "Avoid touching face frequently"],
+      dry: ["Use a humidifier in dry weather", "Take shorter, lukewarm showers", "Sleep in a cool, hydrated room", "Protect skin from harsh winds"],
+      normal: ["Maintain consistent sleep schedule", "Exercise regularly for circulation", "Practice stress management", "Protect from sun exposure"],
+      combination: ["Adjust routine seasonally", "Balance work and rest", "Clean makeup brushes regularly", "Monitor skin changes"]
     };
 
     setResult({
       skinType: randomSkinType,
       issues: issuesMap[randomSkinType],
+      possibleCauses: causesMap[randomSkinType],
       remedies: remediesMap[randomSkinType],
       products: productsMap[randomSkinType],
+      dietTips: dietMap[randomSkinType],
+      lifestyleAdvice: lifestyleMap[randomSkinType]
     });
 
     setAnalyzing(false);
-    
-    toast({
-      title: "Analysis Complete!",
-      description: "Your personalized skincare recommendations are ready",
-    });
+    toast({ title: "Analysis Complete!", description: "Your wellness recommendations are ready" });
   };
 
   return (
     <div className="min-h-screen pt-24 pb-20 bg-gradient-soft">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-4">AI Skin Analysis</h1>
+          <h1 className="text-4xl font-bold mb-4">AI Skin Health Analysis</h1>
           <p className="text-muted-foreground">
-            Take a photo or upload an image for instant skin analysis
+            Understand your skin's needs and discover holistic wellness recommendations
           </p>
         </div>
 
@@ -203,30 +215,15 @@ const SkinAnalysis = () => {
           {!image && !stream && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  size="lg"
-                  onClick={startCamera}
-                  className="bg-gradient-primary hover:shadow-glow transition-smooth"
-                >
+                <Button size="lg" onClick={startCamera} className="bg-gradient-primary hover:shadow-glow transition-smooth">
                   <Camera className="w-5 h-5 mr-2" />
                   Use Camera
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="transition-smooth"
-                >
+                <Button size="lg" variant="outline" onClick={() => fileInputRef.current?.click()}>
                   <Upload className="w-5 h-5 mr-2" />
                   Upload Image
                 </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
               </div>
               <p className="text-center text-sm text-muted-foreground">
                 For best results, ensure good lighting and a clear view of your face
@@ -237,46 +234,22 @@ const SkinAnalysis = () => {
           {stream && (
             <div className="space-y-4">
               <div className="relative bg-gray-900 rounded-lg overflow-hidden min-h-[400px] flex items-center justify-center">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{
-                    transform: 'scaleX(-1)',
-                    width: '100%',
-                    height: 'auto',
-                    minHeight: '400px',
-                    objectFit: 'cover'
-                  }}
-                />
+                <video ref={videoRef} autoPlay playsInline muted style={{ transform: 'scaleX(-1)', width: '100%', minHeight: '400px', objectFit: 'cover' }} />
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute top-4 left-4 right-4 flex justify-center">
                     <div className="bg-green-500/80 backdrop-blur-sm text-white px-6 py-2 rounded-full text-sm font-medium shadow-lg flex items-center gap-2">
                       <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                      Camera Active - Position Your Face
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="relative">
-                      <div className="border-4 border-white/30 rounded-full w-64 h-64 md:w-80 md:h-80" />
-                      <div className="absolute inset-0 border-2 border-primary rounded-full w-64 h-64 md:w-80 md:h-80 animate-pulse" />
+                      Camera Active
                     </div>
                   </div>
                 </div>
               </div>
               <div className="flex gap-4 justify-center">
-                <Button 
-                  onClick={captureImage} 
-                  size="lg"
-                  className="bg-gradient-primary hover:shadow-glow transition-smooth"
-                >
+                <Button onClick={captureImage} size="lg" className="bg-gradient-primary hover:shadow-glow transition-smooth">
                   <Camera className="w-5 h-5 mr-2" />
                   Capture Photo
                 </Button>
-                <Button onClick={stopCamera} variant="outline" size="lg">
-                  Cancel
-                </Button>
+                <Button onClick={stopCamera} variant="outline" size="lg">Cancel</Button>
               </div>
             </div>
           )}
@@ -285,21 +258,11 @@ const SkinAnalysis = () => {
             <div className="space-y-4">
               <img src={image} alt="Captured" className="w-full rounded-lg" />
               <div className="flex gap-4 justify-center">
-                <Button
-                  onClick={analyzeSkin}
-                  disabled={analyzing}
-                  className="bg-gradient-primary hover:shadow-glow transition-smooth"
-                >
+                <Button onClick={analyzeSkin} disabled={analyzing} className="bg-gradient-primary hover:shadow-glow transition-smooth">
                   <Sparkles className="w-5 h-5 mr-2" />
-                  {analyzing ? "Analyzing..." : "Analyze Skin"}
+                  {analyzing ? "Analyzing..." : "Analyze Skin Health"}
                 </Button>
-                <Button
-                  onClick={() => setImage(null)}
-                  variant="outline"
-                  disabled={analyzing}
-                >
-                  Retake
-                </Button>
+                <Button onClick={() => setImage(null)} variant="outline" disabled={analyzing}>Retake</Button>
               </div>
             </div>
           )}
@@ -308,63 +271,110 @@ const SkinAnalysis = () => {
             <div className="space-y-6">
               <img src={image!} alt="Analyzed" className="w-full rounded-lg mb-6" />
               
+              {/* Skin Issues - Always Visible */}
               <div className="bg-muted/50 p-6 rounded-lg">
                 <h3 className="text-2xl font-semibold mb-2">
-                  Your Skin Type: <span className="text-primary capitalize">{result.skinType}</span>
+                  Skin Type: <span className="text-primary capitalize">{result.skinType}</span>
                 </h3>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Detected Issues:</h4>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      {result.issues.map((issue, idx) => (
-                        <li key={idx}>{issue}</li>
-                      ))}
-                    </ul>
-                  </div>
+                <div className="mt-4">
+                  <h4 className="font-semibold mb-2">Identified Concerns:</h4>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {result.issues.map((issue, idx) => <li key={idx}>{issue}</li>)}
+                  </ul>
+                </div>
+                <div className="mt-4">
+                  <h4 className="font-semibold mb-2">Possible Causes (Health-focused):</h4>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {result.possibleCauses.map((cause, idx) => <li key={idx}>{cause}</li>)}
+                  </ul>
                 </div>
               </div>
 
-              <div className="bg-gradient-primary/10 p-6 rounded-lg border border-primary/20">
-                <h4 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  Natural Home Remedies
-                </h4>
-                <ul className="space-y-3">
-                  {result.remedies.map((remedy, idx) => (
-                    <li key={idx} className="flex gap-3">
-                      <span className="text-primary font-semibold">{idx + 1}.</span>
-                      <span>{remedy}</span>
-                    </li>
-                  ))}
-                </ul>
+              {/* Dropdown Sections */}
+              <div className="space-y-4">
+                <AnalysisDropdown
+                  title="Home Remedies"
+                  icon={<Leaf className="w-5 h-5 text-primary" />}
+                  variant="primary"
+                >
+                  <ul className="space-y-2">
+                    {result.remedies.map((remedy, idx) => (
+                      <li key={idx} className="flex gap-3 text-sm">
+                        <span className="text-primary font-semibold">{idx + 1}.</span>
+                        <span>{remedy}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link to="/remedies" className="inline-block mt-4">
+                    <Button variant="outline" size="sm">View All Remedies</Button>
+                  </Link>
+                </AnalysisDropdown>
+
+                <AnalysisDropdown
+                  title="GlamCare Products (Optional)"
+                  icon={<ShoppingBag className="w-5 h-5 text-secondary" />}
+                  variant="secondary"
+                >
+                  <p className="text-xs text-muted-foreground mb-3">
+                    These are supplementary recommendations. Focus on lifestyle changes first.
+                  </p>
+                  <ul className="space-y-2">
+                    {result.products.map((product, idx) => (
+                      <li key={idx} className="flex gap-3 text-sm">
+                        <span className="text-secondary font-semibold">{idx + 1}.</span>
+                        <span>{product}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link to="/products" className="inline-block mt-4">
+                    <Button variant="outline" size="sm">View All Products</Button>
+                  </Link>
+                </AnalysisDropdown>
+
+                <AnalysisDropdown
+                  title="Food & Diet Recommendations"
+                  icon={<Apple className="w-5 h-5 text-accent" />}
+                  variant="accent"
+                >
+                  <p className="text-xs text-muted-foreground mb-3">
+                    What you eat significantly impacts your skin health. Consider these dietary adjustments:
+                  </p>
+                  <ul className="space-y-2">
+                    {result.dietTips.map((tip, idx) => (
+                      <li key={idx} className="flex gap-3 text-sm">
+                        <span className="text-accent font-semibold">•</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 p-3 bg-accent/10 rounded text-xs">
+                    <strong>Lifestyle Tips:</strong>
+                    <ul className="mt-2 space-y-1">
+                      {result.lifestyleAdvice.map((advice, idx) => (
+                        <li key={idx}>• {advice}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </AnalysisDropdown>
+
+                <AnalysisDropdown
+                  title="Doctor Consultation"
+                  icon={<Stethoscope className="w-5 h-5 text-muted-foreground" />}
+                  variant="muted"
+                >
+                  <p className="text-sm text-muted-foreground mb-4">
+                    For persistent concerns or if home remedies don't help after 4-6 weeks, 
+                    consider consulting a dermatologist for professional assessment.
+                  </p>
+                  <Link to="/doctors">
+                    <Button className="bg-gradient-primary hover:shadow-glow transition-smooth">
+                      Find a Dermatologist
+                    </Button>
+                  </Link>
+                </AnalysisDropdown>
               </div>
 
-              <div className="bg-secondary/10 p-6 rounded-lg border border-secondary/20">
-                <h4 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-secondary" />
-                  Recommended Products (Active Ingredients)
-                </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Consult with a dermatologist before starting any new skincare products
-                </p>
-                <ul className="space-y-3">
-                  {result.products.map((product, idx) => (
-                    <li key={idx} className="flex gap-3">
-                      <span className="text-secondary font-semibold">{idx + 1}.</span>
-                      <span>{product}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Button
-                onClick={() => {
-                  setImage(null);
-                  setResult(null);
-                }}
-                variant="outline"
-                className="w-full"
-              >
+              <Button onClick={() => { setImage(null); setResult(null); }} variant="outline" className="w-full">
                 Analyze Again
               </Button>
             </div>
