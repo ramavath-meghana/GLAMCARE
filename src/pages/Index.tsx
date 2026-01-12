@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Camera, Users, MessageCircle, Sparkles, Leaf, ShoppingBag } from "lucide-react";
-import heroImage from "@/assets/HERO.png";
+import heroImage from "@/assets/Hero.png";
 
 const Index = () => {
   const features = [
