@@ -42,7 +42,7 @@ const Index = () => {
                 </span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-lg">
-                Your skin reflects your inner health. Discover holistic skincare solutions through AI analysis, natural remedies, and expert dermatology - all focused on wellness, not beauty standards.
+                Your skin reflects your inner health. Discover  skincare solutions through AI analysis, natural remedies, and expert dermatology - all focused on wellness, not beauty standards.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link to="/analyze">
@@ -95,7 +95,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-              Holistic Skin Wellness
+               Skin Wellness
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Combining AI technology with natural remedies and expert care - focused on health, not cosmetic standards
