@@ -207,7 +207,7 @@ const SkinAnalysis = () => {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-4">AI Skin Health Analysis</h1>
           <p className="text-muted-foreground">
-            Understand your skin's needs and discover holistic wellness recommendations
+            Understand your skin's needs and discover  wellness recommendations
           </p>
         </div>
 
