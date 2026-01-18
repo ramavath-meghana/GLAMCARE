@@ -1,73 +1,78 @@
-# Welcome to your  project
+GLAMCARE
 
-## Project info
+A Personalized Skincare Guidance Platform
 
-**URL**: https://lovable.dev/projects/67f5114a-0b54-47b2-bb81-f549640e3737
+About the Project
 
-## How can I edit this code?
+GLAMCARE is a web-based skincare guidance platform designed to help users understand skincare routines and product suitability through a clean and intuitive user interface.
 
-There are several ways of editing your application.
+This project was independently designed, developed, and deployed as part of hands-on learning in modern frontend development. The focus of the project is on usability, clean component structure, and applying real-world development practices.
 
-**Use Lovable**
+Key Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/67f5114a-0b54-47b2-bb81-f549640e3737) and start prompting.
+Responsive and user-friendly interface
 
-Changes made via Lovable will be committed automatically to this repo.
+Component-based architecture using React
 
-**Use your preferred IDE**
+Clean and maintainable codebase with TypeScript
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Styled using Tailwind CSS and reusable UI components
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Fast development and build workflow using Vite
 
-Follow these steps:
+Tech Stack
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Frontend: React, TypeScript
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Styling: Tailwind CSS, shadcn/ui
 
-# Step 3: Install the necessary dependencies.
-npm i
+Build Tool: Vite
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Version Control: Git and GitHub
+
+Live Demo
+
+Live application link:
+
+
+Screenshots
+
+Screenshots of the application interface will be added here.
+
+(Example: Home page, feature sections, or key UI screens.)
+
+Installation and Local Setup
+Prerequisites
+
+Node.js (v18 or later recommended)
+
+npm
+
+Steps
+
+git clone <your-repository-url>
+cd glamcare
+npm install
 npm run dev
-```
 
-**Edit a file directly in GitHub**
+The application will run locally after starting the development server.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Project Motivation
 
-**Use GitHub Codespaces**
+GLAMCARE was built to strengthen practical skills in frontend development by working on a complete application lifecycle, including UI design, component structuring, and deployment. The project emphasizes clarity, maintainability, and the use of modern web development tools.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Future Enhancements
 
-## What technologies are used for this project?
+Personalized skincare recommendations
 
-This project is built with:
+Backend and database integration
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+User authentication and profiles
 
-## How can I deploy this project?
+Accessibility and performance improvements
 
-Simply open [Lovable](https://lovable.dev/projects/67f5114a-0b54-47b2-bb81-f549640e3737) and click on Share -> Publish.
+Developer
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Meghana
+B.Tech Computer Science Engineering
+Frontend and Web Development
