@@ -15,10 +15,9 @@ interface Message {
 
 /**
  * Supabase Edge Function URL
- * (already deployed by you)
  */
 const CHAT_URL =
-  "https://rdfyokajmcutemkmkcxf.supabase.co/functions/v1/glamcare-chatbot";
+  "https://jiskmtangnzelxdqhrwh.supabase.co/functions/v1/skincare-chat";
 
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,32 +65,80 @@ const ChatBot = () => {
     setIsLoading(true);
 
     try {
+      // Build conversation history for context
+      const conversationHistory = messages
+        .filter(m => m.id !== "welcome")
+        .map(m => ({
+          role: m.sender === "user" ? "user" : "assistant",
+          content: m.text,
+        }));
+      
+      // Add current message
+      conversationHistory.push({ role: "user", content: userText });
+
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: userText,
+          messages: conversationHistory,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Supabase function failed");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to get response");
       }
 
-      const data = await response.json();
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
 
-      // Add bot reply
+      const decoder = new TextDecoder();
+      let botReply = "";
+      const botMessageId = (Date.now() + 1).toString();
+
+      // Add placeholder bot message
       setMessages((prev) => [
         ...prev,
         {
-          id: (Date.now() + 1).toString(),
-          text: data.reply,
+          id: botMessageId,
+          text: "",
           sender: "bot",
           timestamp: new Date(),
         },
       ]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            if (data === "[DONE]") continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                botReply += content;
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === botMessageId ? { ...msg, text: botReply } : msg
+                  )
+                );
+              }
+            } catch {
+              // Skip malformed JSON
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error(error);
       toast({
