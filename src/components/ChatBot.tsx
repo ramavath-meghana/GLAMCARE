@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, X, Send, Loader2, Sparkles } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Sparkles, Mic, MicOff } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
@@ -23,6 +23,14 @@ const QUICK_QUESTIONS = [
   "How to reduce dark circles?",
 ];
 
+// Get Speech Recognition API (cross-browser)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getSpeechRecognition = (): any => {
+  if (typeof window === 'undefined') return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+};
+
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -35,8 +43,72 @@ const ChatBot = () => {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
+
+  // Initialize speech recognition
+  useEffect(() => {
+    const SpeechRecognitionAPI = getSpeechRecognition();
+    
+    if (SpeechRecognitionAPI) {
+      setSpeechSupported(true);
+      const recognition = new SpeechRecognitionAPI();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((result: any) => result[0].transcript)
+          .join("");
+        
+        setInputValue(transcript);
+
+        // If this is a final result
+        if (event.results[0].isFinal) {
+          setIsListening(false);
+        }
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+        
+        if (event.error === "not-allowed") {
+          toast({
+            title: "Microphone Access Denied",
+            description: "Please allow microphone access to use voice input.",
+            variant: "destructive",
+          });
+        } else if (event.error !== "aborted") {
+          toast({
+            title: "Voice Input Error",
+            description: "Could not recognize speech. Please try again.",
+            variant: "destructive",
+          });
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, [toast]);
 
   // Auto scroll to bottom when messages change
   useEffect(() => {
@@ -48,9 +120,36 @@ const ChatBot = () => {
     }
   }, [messages]);
 
+  const toggleListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (error) {
+        console.error("Failed to start speech recognition:", error);
+        toast({
+          title: "Voice Input Error",
+          description: "Could not start voice input. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [isListening, toast]);
+
   const handleSend = async (customMessage?: string) => {
     const userText = customMessage || inputValue.trim();
     if (!userText || isLoading) return;
+
+    // Stop listening if active
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
 
     // Add user message
     const userMessage: Message = {
@@ -276,6 +375,19 @@ const ChatBot = () => {
         </div>
       )}
 
+      {/* Voice indicator */}
+      {isListening && (
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-2 text-sm text-primary">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+            </span>
+            Listening... Speak now
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="p-4 border-t bg-background">
         <div className="flex gap-2">
@@ -283,10 +395,29 @@ const ChatBot = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder="Ask about skin health, remedies..."
+            placeholder={isListening ? "Listening..." : "Ask about skin health, remedies..."}
             disabled={isLoading}
             className="flex-1"
           />
+          
+          {/* Voice input button */}
+          {speechSupported && (
+            <Button
+              onClick={toggleListening}
+              size="icon"
+              variant={isListening ? "destructive" : "outline"}
+              disabled={isLoading}
+              className={`shrink-0 ${isListening ? "animate-pulse" : ""}`}
+              title={isListening ? "Stop listening" : "Voice input"}
+            >
+              {isListening ? (
+                <MicOff className="w-4 h-4" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+            </Button>
+          )}
+
           <Button
             onClick={() => handleSend()}
             size="icon"
