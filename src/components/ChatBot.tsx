@@ -18,7 +18,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/skincare-cha
 
 const QUICK_QUESTIONS = [
   "How to reduce acne naturally?",
-  "Best foods for glowing skin",
+  "Best foods for glowing skin and healthy hair",
   "Home remedies for dry skin",
   "How to reduce dark circles?",
 ];
